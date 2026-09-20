@@ -1,0 +1,8 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+*/obj
+/Nop.Plugin Template 4.90/.vs
+/Nop.Plugin.MCP/.vs
