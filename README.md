@@ -5,7 +5,7 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server plugi
 
 ## MCP Tools
 <details>
-  <summary>Click to See Available Tools </summary>
+  <summary>Click to see some of the available tools </summary>
   
 Read-only is the default. Write tools throw an error unless the **Allow write tools** option is enabled in Admin Configuration
 
