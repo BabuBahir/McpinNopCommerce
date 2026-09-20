@@ -119,16 +119,17 @@ public class CustomerTools : BaseMcpTool
     /// Creates a customer
     /// </summary>
     [McpServerTool(Name = "create_customer")]
-    [Description("Creates a new customer with the given details. No password is set, so the customer cannot sign in until a password is assigned in the admin area. Write tool; only available when write tools are enabled.")]
+    [Description("Creates a new customer with the given details. The gender defaults to male (M) unless a female (F) gender is requested. When no customer role is specified the Guest role is assigned; when a requested role is not available the Guest role is assigned instead. No password is set, so the customer cannot sign in until a password is assigned in the admin area. Write tool; only available when write tools are enabled.")]
     public async Task<CustomerInfo> CreateCustomerAsync(
         [Description("The customer email address.")] string email = null,
         [Description("The customer username.")] string username = null,
         [Description("The customer first name.")] string firstName = null,
         [Description("The customer last name.")] string lastName = null,
-        [Description("The customer gender (M or F).")] string gender = null,
+        [Description("The customer gender (M or F). Defaults to M (male) when omitted.")] string gender = null,
         [Description("The customer date of birth.")] DateTime? dateOfBirth = null,
         [Description("The customer company.")] string company = null,
         [Description("The customer phone number.")] string phone = null,
+        [Description("The customer role to assign, by name or system name, e.g. 'Guest', 'Registered', 'Vendors' or a custom role. When omitted the Guest role is assigned.")] string customerRole = null,
         [Description("A value indicating whether the customer is active. Defaults to true.")] bool active = true,
         [Description("The customer street address.")] string streetAddress = null,
         [Description("The customer street address (second line).")] string streetAddress2 = null,
@@ -141,13 +142,19 @@ public class CustomerTools : BaseMcpTool
     {
         EnsureWriteToolsEnabled();
 
+        var guestRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.GuestsRoleName);
+
+        var role = string.IsNullOrWhiteSpace(customerRole)
+            ? guestRole
+            : await ResolveCustomerRoleAsync(customerRole);
+
         var customer = new Customer
         {
             Email = email,
             Username = username,
             FirstName = firstName,
             LastName = lastName,
-            Gender = gender,
+            Gender = NormalizeGender(gender),
             DateOfBirth = dateOfBirth,
             Company = company,
             Phone = phone,
@@ -165,6 +172,14 @@ public class CustomerTools : BaseMcpTool
 
         await _customerService.InsertCustomerAsync(customer);
 
+        if (role is null)
+        {
+            await AssignCustomerRoleAsync(customer, guestRole);
+            throw new Exception($"No such customer role '{customerRole}' is available. The Guest role was assigned instead.");
+        }
+
+        await AssignCustomerRoleAsync(customer, role);
+
         return await PrepareCustomerInfoAsync(customer);
     }
 
@@ -172,17 +187,18 @@ public class CustomerTools : BaseMcpTool
     /// Updates a customer
     /// </summary>
     [McpServerTool(Name = "update_customer")]
-    [Description("Updates the fields of an existing customer. Parameters that are omitted or left at their default value are left unchanged. Write tool; only available when write tools are enabled.")]
+    [Description("Updates the fields of an existing customer. Parameters that are omitted or left at their default value are left unchanged, except gender (defaults to male M unless a female F gender is requested) and the customer role (defaults to Guest; a requested role that is not available falls back to Guest). Write tool; only available when write tools are enabled.")]
     public async Task<CustomerInfo> UpdateCustomerAsync(
         [Description("The customer identifier to update.")] int customerId,
         [Description("The customer email address.")] string email = null,
         [Description("The customer username.")] string username = null,
         [Description("The customer first name. Pass an empty string to clear it.")] string firstName = null,
         [Description("The customer last name. Pass an empty string to clear it.")] string lastName = null,
-        [Description("The customer gender (M or F).")] string gender = null,
+        [Description("The customer gender (M or F). Defaults to M (male) when omitted.")] string gender = null,
         [Description("The customer date of birth.")] DateTime? dateOfBirth = null,
         [Description("The customer company.")] string company = null,
         [Description("The customer phone number.")] string phone = null,
+        [Description("The customer role to assign, by name or system name, e.g. 'Guest', 'Registered', 'Vendors' or a custom role. When omitted the Guest role is assigned.")] string customerRole = null,
         [Description("A value indicating whether the customer is active. Null leaves it unchanged.")] bool? active = null,
         [Description("The customer street address.")] string streetAddress = null,
         [Description("The customer street address (second line).")] string streetAddress2 = null,
@@ -200,6 +216,12 @@ public class CustomerTools : BaseMcpTool
         if (customer is null || customer.Deleted)
             return null;
 
+        var guestRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.GuestsRoleName);
+
+        var role = string.IsNullOrWhiteSpace(customerRole)
+            ? guestRole
+            : await ResolveCustomerRoleAsync(customerRole);
+
         if (email is not null)
             customer.Email = email;
         if (username is not null)
@@ -208,8 +230,7 @@ public class CustomerTools : BaseMcpTool
             customer.FirstName = firstName;
         if (lastName is not null)
             customer.LastName = lastName;
-        if (gender is not null)
-            customer.Gender = gender;
+        customer.Gender = NormalizeGender(gender);
         if (dateOfBirth is not null)
             customer.DateOfBirth = dateOfBirth;
         if (company is not null)
@@ -234,6 +255,14 @@ public class CustomerTools : BaseMcpTool
             customer.AdminComment = adminComment;
 
         await _customerService.UpdateCustomerAsync(customer);
+
+        if (role is null)
+        {
+            await AssignCustomerRoleAsync(customer, guestRole);
+            throw new Exception($"No such customer role '{customerRole}' is available. The Guest role was assigned instead.");
+        }
+
+        await AssignCustomerRoleAsync(customer, role);
 
         return await PrepareCustomerInfoAsync(customer);
     }
@@ -331,6 +360,56 @@ public class CustomerTools : BaseMcpTool
         info.Roles = roles.Select(role => role.Name).ToList();
 
         return info;
+    }
+
+    /// <summary>
+    /// Resolves a customer role by its name or system name; returns null when the role is not available
+    /// </summary>
+    protected async Task<CustomerRole> ResolveCustomerRoleAsync(string role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+            return null;
+
+        var roles = await _customerService.GetAllCustomerRolesAsync(showHidden: false);
+
+        return roles.FirstOrDefault(candidate =>
+            candidate.Name.Equals(role.Trim(), StringComparison.InvariantCultureIgnoreCase) ||
+            candidate.SystemName.Equals(role.Trim(), StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    /// <summary>
+    /// Adds the customer-role mapping when the customer does not have the role yet
+    /// </summary>
+    protected async Task AssignCustomerRoleAsync(Customer customer, CustomerRole role)
+    {
+        if (role is null)
+            return;
+
+        var existingRoles = await _customerService.GetCustomerRolesAsync(customer, showHidden: false);
+        if (existingRoles.Any(item => item.Id == role.Id))
+            return;
+
+        await _customerService.AddCustomerRoleMappingAsync(new CustomerCustomerRoleMapping
+        {
+            CustomerId = customer.Id,
+            CustomerRoleId = role.Id
+        });
+    }
+
+    /// <summary>
+    /// Normalizes the gender to M (male) by default, or F (female) when requested
+    /// </summary>
+    protected static string NormalizeGender(string gender)
+    {
+        if (string.IsNullOrWhiteSpace(gender))
+            return "M";
+
+        var normalized = gender.Trim();
+
+        return normalized.Equals("F", StringComparison.InvariantCultureIgnoreCase) ||
+               normalized.Equals("Female", StringComparison.InvariantCultureIgnoreCase)
+            ? "F"
+            : "M";
     }
 
     #endregion

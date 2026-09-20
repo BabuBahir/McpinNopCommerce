@@ -4,8 +4,8 @@
   "SystemName": "Misc.Mcp",
   "Version": "1.00",
   "SupportedVersions": [ "5.00" ],
-  "Author": "nopCommerce team",
+  "Author": "https://github.com/BabuBahir",
   "DisplayOrder": 1,
   "FileName": "Nop.Plugin.Misc.Mcp.dll",
-  "Description": "Exposes a Model Context Protocol (MCP) server that lets AI agents query the store catalog (products, categories, manufacturers) via LLM tool calls."
+  "Description": "Exposes a Model Context Protocol (MCP) server that lets AI agents operate your store via LLM tool calls."
 }
