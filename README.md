@@ -32,6 +32,7 @@ dotnet build Nop.Plugin.MCP\Nop.Plugin.Misc.Mcp.slnx -c Release
 The build deploys into `<checkout>\src\Presentation\Nop.Web\Plugins\Misc.Mcp`. Restart the web app, then enable the plugin from **Admin → Configuration → Local plugins**.
 </details>
 ## Configuration
+<details>
 
 Settings on the plugin's admin page:
 - **Enabled** – exposes the MCP endpoint (takes effect after an app restart)
@@ -39,6 +40,7 @@ Settings on the plugin's admin page:
 - **API key** – static secret that MCP clients may present
 - **Allow write tools** – gate for the write tools above; unchecked, the endpoint is strictly read-only
 - **Default page size** / **Maximum page size** – pagination limits for tool calls
+</details>
 
 ## Authentication
 
