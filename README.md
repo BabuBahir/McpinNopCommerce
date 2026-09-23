@@ -1,4 +1,4 @@
-nopCommerce MCP plugin  - Let Claude Operate NopCommerce
+ MCP plugin  - Let Claude Operate NopCommerce
 ====
 
 An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server plugin for nopCommerce 5.00 (`.NET 10`), exposed over Streamable HTTP.
