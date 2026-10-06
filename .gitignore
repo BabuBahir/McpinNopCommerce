@@ -6,3 +6,5 @@
 */obj
 /Nop.Plugin Template 4.90/.vs
 /Nop.Plugin.MCP/.vs
+config.bat
+node_modules

@@ -74,9 +74,18 @@ Give Prompt to add a Vendor and let AI decide what MCP tools to call
 <img width="1753" height="660" alt="image" src="https://github.com/user-attachments/assets/c4dc37b3-3ee0-4acd-b7bc-f6a547db7595" />
 <img width="1095" height="820" alt="image" src="https://github.com/user-attachments/assets/443247b5-8623-4275-b2ab-de66e5f3c209" />
 
-
- 
  
 </details>
+
+
+### Troubleshooting Write Operations
+
+If you encounter the error `An error occurred invoking '[tool_name]'` during a create, update, or delete operation, write permissions are disabled.
+
+**Solution:**
+1. Go to **Admin** > **Configuration**.
+2. Enable **Allow write tools** (`AllowWriteTools`).
+
+  
   
 The path comes from **Endpoint path** (default `/mcp`), the key from **API key**. Plain `http://` only works for localhost; remote stores must be served over HTTPS.
